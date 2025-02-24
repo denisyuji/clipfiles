@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# Usage: ./clipfiles.sh [<path>]
+
+# Default to current directory if no argument is provided
+PATH_ARG="${1:-.}"
+
+# Variable to accumulate all output
+OUTPUT=""
+
+# If the argument is a directory
+if [ -d "$PATH_ARG" ]; then
+  cd "$PATH_ARG" || {
+    echo "Cannot change to directory: $PATH_ARG"
+    exit 1
+  }
+  echo "$(find . -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f ! -iname '*README*' ! -iname '*LICENSE*' -print \))"
+  # Gather data for all non-hidden files
+  while IFS= read -r FILE; do
+    OUTPUT+=$'\n'"$FILE"$'\n'
+    OUTPUT+='```'$'\n'
+    OUTPUT+="$(cat "$FILE")"$'\n'
+    OUTPUT+='```'$'\n'
+  done < <(find . -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f ! -iname '*README*' ! -iname '*LICENSE*' -print \))
+
+# If the argument is a file
+elif [ -f "$PATH_ARG" ]; then
+  OUTPUT+="$PATH_ARG"$'\n'
+  OUTPUT+='```'$'\n'
+  OUTPUT+="$(cat "$PATH_ARG")"$'\n'
+  OUTPUT+='```'$'\n'
+
+# If the path is invalid
+else
+  echo "Invalid path: $PATH_ARG"
+  exit 1
+fi
+
+echo "$OUTPUT" | xclip -selection clipboard
