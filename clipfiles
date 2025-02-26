@@ -8,27 +8,42 @@ PATH_ARG="${1:-.}"
 # Variable to accumulate all output
 OUTPUT=""
 
+# Function to check if a file is binary
+is_binary() {
+  local file="$1"
+  [[ "$(file --mime-encoding -b "$file")" != "us-ascii" && "$(file --mime-encoding -b "$file")" != "utf-8" ]]
+}
+
 # If the argument is a directory
 if [ -d "$PATH_ARG" ]; then
   cd "$PATH_ARG" || {
     echo "Cannot change to directory: $PATH_ARG"
     exit 1
   }
-  echo "$(find . -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f ! -iname '*README*' ! -iname '*LICENSE*' -print \))"
-  # Gather data for all non-hidden files
+  
+  # Gather data for all non-hidden and non-binary files
   while IFS= read -r FILE; do
-    OUTPUT+=$'\n'"$FILE"$'\n'
-    OUTPUT+='```'$'\n'
-    OUTPUT+="$(cat "$FILE")"$'\n'
-    OUTPUT+='```'$'\n'
+    if ! is_binary "$FILE"; then
+      OUTPUT+=$'\n'"$FILE"$'\n'
+      OUTPUT+='```'$'\n'
+      OUTPUT+="$(cat "$FILE")"$'\n'
+      OUTPUT+='```'$'\n'
+    else
+      echo "Skipping binary file: $FILE"
+    fi
   done < <(find . -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f ! -iname '*README*' ! -iname '*LICENSE*' -print \))
 
 # If the argument is a file
 elif [ -f "$PATH_ARG" ]; then
-  OUTPUT+="$PATH_ARG"$'\n'
-  OUTPUT+='```'$'\n'
-  OUTPUT+="$(cat "$PATH_ARG")"$'\n'
-  OUTPUT+='```'$'\n'
+  if ! is_binary "$PATH_ARG"; then
+    OUTPUT+="$PATH_ARG"$'\n'
+    OUTPUT+='```'$'\n'
+    OUTPUT+="$(cat "$PATH_ARG")"$'\n'
+    OUTPUT+='```'$'\n'
+  else
+    echo "Skipping binary file: $PATH_ARG"
+    exit 1
+  fi
 
 # If the path is invalid
 else
@@ -36,4 +51,10 @@ else
   exit 1
 fi
 
-echo "$OUTPUT" | xclip -selection clipboard
+# Copy to clipboard if OUTPUT is not empty
+if [[ -n "$OUTPUT" ]]; then
+  echo "$OUTPUT" | xclip -selection clipboard
+  echo "Copied to clipboard."
+else
+  echo "No text files found to copy."
+fi
