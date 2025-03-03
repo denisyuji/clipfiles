@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# Usage: ./clipfiles.sh [<path>]
+# Usage: ./clipfiles.sh [<path or pattern>]
 
 # Default to current directory if no argument is provided
 if [ "$#" -eq 0 ]; then
-  set -- "."
+  set -- "*"
 fi
 
 # Variable to accumulate all output
@@ -16,30 +16,25 @@ is_binary() {
   [[ "$(file --mime-encoding -b "$file")" != "us-ascii" && "$(file --mime-encoding -b "$file")" != "utf-8" ]]
 }
 
-# If the argument is a directory
+# Expand wildcards
+FILES=()
 for ARG in "$@"; do
-  if [ -d "$ARG" ]; then
-    while IFS= read -r FILE; do
-      if ! is_binary "$FILE"; then
-        OUTPUT+=$'\n'"$FILE"$'\n'
-        OUTPUT+='```'$'\n'
-        OUTPUT+="$(cat "$FILE")"$'\n'
-        OUTPUT+='```'$'\n'
-      else
-        echo "Skipping binary file: $FILE"
-      fi
-    done < <(find "$ARG" -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f ! -iname '*README*' ! -iname '*LICENSE*' -print \))
-  elif [ -f "$ARG" ]; then
-    if ! is_binary "$ARG"; then
-      OUTPUT+=$'\n'"$ARG"$'\n'
+  FILES+=( $ARG )  # Expand and collect files
+done
+
+# Process each file
+for FILE in "${FILES[@]}"; do
+  if [ -f "$FILE" ]; then
+    if ! is_binary "$FILE"; then
+      OUTPUT+=$'\n'"$FILE"$'\n'
       OUTPUT+='```'$'\n'
-      OUTPUT+="$(cat "$ARG")"$'\n'
+      OUTPUT+="$(cat "$FILE")"$'\n'
       OUTPUT+='```'$'\n'
     else
-      echo "Skipping binary file: $ARG"
+      echo "Skipping binary file: $FILE"
     fi
   else
-    echo "Invalid path: $ARG"
+    echo "Invalid path or no matching files: $FILE"
   fi
 done
 
