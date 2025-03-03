@@ -81,3 +81,7 @@ This copies the content of `myfile.txt` to the clipboard.
 ## License ##
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+## Copyright
+
+Copyright © 2024 Denis Shimizu
