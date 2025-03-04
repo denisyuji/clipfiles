@@ -7,6 +7,19 @@ if [ "$#" -eq 0 ]; then
   set -- "*"
 fi
 
+# Function to display help
+show_help() {
+  echo "Usage: clipfiles [options] [<path or pattern>]"
+  echo "Options:" 
+  echo "  -h, --help       Show this help message"
+  echo "  -v, --version    Show version information"
+}
+
+# Function to display version
+show_version() {
+  echo "clipfiles version 1.0"
+}
+
 # Variable to accumulate all output
 OUTPUT=""
 
@@ -16,10 +29,31 @@ is_binary() {
   [[ "$(file --mime-encoding -b "$file")" != "us-ascii" && "$(file --mime-encoding -b "$file")" != "utf-8" ]]
 }
 
+# Check for options
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;  
+    -v|--version)
+      show_version
+      exit 0
+      ;;  
+    *)
+      break
+      ;;  
+  esac
+done
+
 # Expand wildcards
 FILES=()
 for ARG in "$@"; do
-  FILES+=( $ARG )  # Expand and collect files
+  if [ "$ARG" == "." ]; then
+    FILES+=( * )  # Add all files in the current directory
+  else
+    FILES+=( $ARG )  # Expand and collect files
+  fi
 done
 
 # Process each file
@@ -38,7 +72,7 @@ for FILE in "${FILES[@]}"; do
   fi
 done
 
-# Copy to clipboard if OUTPUT is not empty
+# Output to console if OUTPUT is not empty
 if [[ -n "$OUTPUT" ]]; then
   echo "$OUTPUT" | xclip -selection clipboard
   echo "Copied to clipboard."
