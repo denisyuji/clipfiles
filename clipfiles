@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Usage: ./clipfiles.sh [<path or pattern>]
+# Usage: clipfiles [options] [<path or pattern>]
 
 # Default to current directory if no argument is provided
 if [ "$#" -eq 0 ]; then
@@ -17,11 +17,38 @@ show_help() {
 
 # Function to display version
 show_version() {
-  echo "clipfiles version 1.0"
+  echo "clipfiles version 1.2"
 }
 
-# Variable to accumulate all output
-OUTPUT=""
+# Determine language from file extension
+get_language() {
+  local ext="${1##*.}"
+  case "$ext" in
+    py) echo "python" ;;
+    sh|bash) echo "shell" ;;
+    c|h) echo "c" ;;
+    cpp|cc|cxx|hpp) echo "cpp" ;;
+    go) echo "go" ;;
+    rs) echo "rust" ;;
+    js) echo "javascript" ;;
+    ts) echo "typescript" ;;
+    java) echo "java" ;;
+    html|htm) echo "html" ;;
+    css) echo "css" ;;
+    json) echo "json" ;;
+    yaml|yml) echo "yaml" ;;
+    toml) echo "toml" ;;
+    md) echo "markdown" ;;
+    txt|text|log) echo "text" ;;
+    dockerfile|Dockerfile) echo "dockerfile" ;;
+    mk|makefile|Makefile) echo "makefile" ;;
+    bb|bbappend|bbclass|conf|inc) echo "bitbake" ;;  # Yocto
+    meson) echo "meson" ;;
+    ninja) echo "ninja" ;;
+    xml) echo "xml" ;;
+    *) echo "" ;;
+  esac
+}
 
 # Function to check if a file is binary
 is_binary() {
@@ -56,14 +83,22 @@ for ARG in "$@"; do
   fi
 done
 
+# Variable to accumulate all output
+OUTPUT=""
+
 # Process each file
 for FILE in "${FILES[@]}"; do
   if [ -f "$FILE" ]; then
     if ! is_binary "$FILE"; then
-      OUTPUT+=$'\n'"$FILE"$'\n'
-      OUTPUT+='```'$'\n'
+      LANG=$(get_language "$FILE")
+      OUTPUT+=$'\n'"### $FILE"$'\n'
+      if [ -n "$LANG" ]; then
+        OUTPUT+="\`\`\`$LANG"$'\n'
+      else
+        OUTPUT+="\`\`\`"$'\n'
+      fi
       OUTPUT+="$(cat "$FILE")"$'\n'
-      OUTPUT+='```'$'\n'
+      OUTPUT+="\`\`\`"$'\n'
     else
       echo "Skipping binary file: $FILE"
     fi
@@ -72,7 +107,7 @@ for FILE in "${FILES[@]}"; do
   fi
 done
 
-# Output to console if OUTPUT is not empty
+# Output to clipboard if OUTPUT is not empty
 if [[ -n "$OUTPUT" ]]; then
   echo "$OUTPUT" | xclip -selection clipboard
   echo "Copied to clipboard."
