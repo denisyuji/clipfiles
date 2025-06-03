@@ -4,7 +4,7 @@
 
 # Default to current directory if no argument is provided
 if [ "$#" -eq 0 ]; then
-  set -- "*"
+  set -- "."
 fi
 
 # Function to display help
@@ -71,39 +71,48 @@ while [[ "$#" -gt 0 ]]; do
       break
       ;;  
   esac
+  shift
 done
 
-# Expand wildcards
-FILES=()
+# Expand and collect files, avoiding duplicates
+declare -A FILE_MAP
+FILES_FIRST=()
+FILES_SECOND=()
+
 for ARG in "$@"; do
-  if [ "$ARG" == "." ]; then
-    FILES+=( * )  # Add all files in the current directory
+  if [ -d "$ARG" ]; then
+    while IFS= read -r -d '' FILE; do
+      if [[ -z "${FILE_MAP[$FILE]}" ]]; then
+        FILE_MAP["$FILE"]=1
+        RELATIVE="${FILE#$ARG/}"
+        if [[ "$RELATIVE" == */* ]]; then
+          FILES_SECOND+=("$FILE")
+        else
+          FILES_FIRST+=("$FILE")
+        fi
+      fi
+    done < <(find "$ARG" \( -type d -name '.*' -prune \) -o \( -type f -print0 \))
   else
-    FILES+=( $ARG )  # Expand and collect files
+    for MATCH in $ARG; do
+      if [ -f "$MATCH" ] && [[ -z "${FILE_MAP[$MATCH]}" ]]; then
+        FILE_MAP["$MATCH"]=1
+        FILES_FIRST+=("$MATCH")
+      fi
+    done
   fi
 done
 
-# Variable to accumulate all output
-OUTPUT=""
+# Process each unique file: top-level files first, then subdirectory files
+ALL_FILES=("${FILES_FIRST[@]}" "${FILES_SECOND[@]}")
 
-# Process each file
-for FILE in "${FILES[@]}"; do
-  if [ -f "$FILE" ]; then
-    if ! is_binary "$FILE"; then
-      LANG=$(get_language "$FILE")
-      OUTPUT+=$'\n'"### $FILE"$'\n'
-      if [ -n "$LANG" ]; then
-        OUTPUT+="\`\`\`$LANG"$'\n'
-      else
-        OUTPUT+="\`\`\`"$'\n'
-      fi
-      OUTPUT+="$(cat "$FILE")"$'\n'
-      OUTPUT+="\`\`\`"$'\n'
-    else
-      echo "Skipping binary file: $FILE"
-    fi
+for FILE in "${ALL_FILES[@]}"; do
+  if ! is_binary "$FILE"; then
+    OUTPUT+=$'\n'"$FILE"$'\n'
+    OUTPUT+='```'$'\n'
+    OUTPUT+="$(cat "$FILE")"$'\n'
+    OUTPUT+='```'$'\n'
   else
-    echo "Invalid path or no matching files: $FILE"
+    echo "Skipping binary file: $FILE"
   fi
 done
 
