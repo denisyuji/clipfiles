@@ -20,35 +20,8 @@ show_version() {
   echo "clipfiles version 1.2"
 }
 
-# Determine language from file extension
-get_language() {
-  local ext="${1##*.}"
-  case "$ext" in
-    py) echo "python" ;;
-    sh|bash) echo "shell" ;;
-    c|h) echo "c" ;;
-    cpp|cc|cxx|hpp) echo "cpp" ;;
-    go) echo "go" ;;
-    rs) echo "rust" ;;
-    js) echo "javascript" ;;
-    ts) echo "typescript" ;;
-    java) echo "java" ;;
-    html|htm) echo "html" ;;
-    css) echo "css" ;;
-    json) echo "json" ;;
-    yaml|yml) echo "yaml" ;;
-    toml) echo "toml" ;;
-    md) echo "markdown" ;;
-    txt|text|log) echo "text" ;;
-    dockerfile|Dockerfile) echo "dockerfile" ;;
-    mk|makefile|Makefile) echo "makefile" ;;
-    bb|bbappend|bbclass|conf|inc) echo "bitbake" ;;  # Yocto
-    meson) echo "meson" ;;
-    ninja) echo "ninja" ;;
-    xml) echo "xml" ;;
-    *) echo "" ;;
-  esac
-}
+# Variable to accumulate all output
+OUTPUT=""
 
 # Function to check if a file is binary
 is_binary() {
@@ -91,7 +64,7 @@ for ARG in "$@"; do
           FILES_FIRST+=("$FILE")
         fi
       fi
-    done < <(find "$ARG" \( -type d -name '.*' -prune \) -o \( -type f -print0 \))
+    done < <(find "$ARG" -mindepth 1 \( -type d -name '.*' -prune \) -o \( -type f -print0 \))
   else
     for MATCH in $ARG; do
       if [ -f "$MATCH" ] && [[ -z "${FILE_MAP[$MATCH]}" ]]; then
